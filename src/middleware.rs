@@ -110,12 +110,8 @@ where
             {
                 return deny();
             }
-            let signer = SecretSigner::new(
-                config.version_number.clone(),
-                config.slack_signing_secret.clone(),
-                request_body.to_string(),
-                slack_request_timestamp,
-            );
+            let signer =
+                SecretSigner::new(config, request_body.to_string(), slack_request_timestamp);
             let generated_hash = signer.sign();
             if generated_hash != slack_signature {
                 return deny();
@@ -127,23 +123,16 @@ where
 }
 
 struct SecretSigner {
-    version_number: String,
-    slack_signing_secret: String,
+    config: SlackAuthConfig,
     request_body: String,
     timestamp: i64,
 }
 
 impl SecretSigner {
     #[must_use]
-    pub const fn new(
-        version_number: String,
-        slack_signing_secret: String,
-        request_body: String,
-        timestamp: i64,
-    ) -> Self {
+    pub const fn new(config: SlackAuthConfig, request_body: String, timestamp: i64) -> Self {
         Self {
-            version_number,
-            slack_signing_secret,
+            config,
             request_body,
             timestamp,
         }
@@ -153,14 +142,14 @@ impl SecretSigner {
     fn sign(&self) -> String {
         let base_string = format!(
             "{version_number}:{timestamp}:{request_body}",
-            version_number = self.version_number,
+            version_number = self.config.version_number,
             timestamp = self.timestamp,
             request_body = self.request_body
         );
         let hash = self.hmac_signature(&base_string);
         format!(
             "{version_number}={hash}",
-            version_number = self.version_number,
+            version_number = self.config.version_number,
             hash = hash
         )
     }
@@ -168,7 +157,8 @@ impl SecretSigner {
     fn hmac_signature(&self, msg: &str) -> String {
         type HmacSha256 = Hmac<Sha256>;
 
-        let mut mac = HmacSha256::new_from_slice(self.slack_signing_secret.as_bytes()).unwrap();
+        let mut mac =
+            HmacSha256::new_from_slice(self.config.slack_signing_secret.as_bytes()).unwrap();
         mac.update(msg.as_bytes());
         let code_bytes = mac.finalize().into_bytes();
         hex::encode(code_bytes)
