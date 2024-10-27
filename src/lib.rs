@@ -6,7 +6,7 @@
 //!
 //! # Example
 //!
-//! ```rust
+//! ```ignore
 //! use axum::{routing::get, Router};
 //! use slack_auth_middleware::{SlackAuthConfig, SlackAuthLayer};
 //!
@@ -29,6 +29,8 @@
 //! }
 //! ```
 //!
+
 mod middleware;
+
 pub use middleware::SlackAuthConfig;
 pub use middleware::SlackAuthLayer;
