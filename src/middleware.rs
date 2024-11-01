@@ -179,13 +179,23 @@ mod tests {
     use tower::util::service_fn;
     use tower::ServiceExt;
 
-    #[test]
-    fn sign() {
+    fn create_test_service() -> (
+        SlackAuthConfig,
+        impl Service<Request<Body>, Response = Response<Body>, Error = Infallible>,
+    ) {
         let config = SlackAuthConfig {
             version_number: "v0".to_string(),
             slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
         };
-        let request_body = concat!(
+        let layer = SlackAuthLayer::new(config.clone());
+        let service = layer.layer(service_fn(|_req| async {
+            Ok::<_, Infallible>(Response::new(Body::from("OK")))
+        }));
+        (config, service)
+    }
+
+    fn create_request_body() -> &'static str {
+        concat!(
             "token=xyzz0WbapA4vBCDEFasx0q6G",
             "&team_id=T1DC2JH3J",
             "&team_domain=testteamnow",
@@ -197,7 +207,16 @@ mod tests {
             "&text=",
             "&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT1DC2JH3J%2F397700885554%2F96rGlfmibIGlgcZRskXaIFfN",
             "&trigger_id=398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
-        );
+        )
+    }
+
+    #[test]
+    fn sign() {
+        let config = SlackAuthConfig {
+            version_number: "v0".to_string(),
+            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
+        };
+        let request_body = create_request_body();
         let signer = SecretSigner::new(config, request_body.to_string(), 1531420618);
         let hash = signer.sign().unwrap();
 
@@ -209,31 +228,8 @@ mod tests {
 
     #[tokio::test]
     async fn valid_request() {
-        let config = SlackAuthConfig {
-            version_number: "v0".to_string(),
-            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
-        };
-        let layer = SlackAuthLayer::new(config.clone());
-        let service = layer.layer(service_fn(|_req| async {
-            Ok::<_, Infallible>(Response::new(Body::from("OK")))
-        }));
-
-        let request_body = concat!(
-            "token=xyzz0WbapA4vBCDEFasx0q6G",
-            "&team_id=T1DC2JH3J",
-            "&team_domain=testteamnow",
-            "&channel_id=G8PSS9T3V",
-            "&channel_name=foobar",
-            "&user_id=U2CERLKJA",
-            "&user_name=roadrunner",
-            "&command=%2Fwebhook-collect",
-            "&text=",
-            "&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT1DC2JH3J%2F397700885554%2F96rGlfmibIGlgcZRskXaIFfN",
-            "&trigger_id=398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
-        );
-        // Since we need the timestamp of the request to be within 5 minutes of the current time,
-        // we cannot use a fixed value. When using a generated valid timestamp however, we need to
-        // generate a hash with that timestamp. Therefore, we use the signer to generate the hash.
+        let (config, service) = create_test_service();
+        let request_body = create_request_body();
         let timestamp = chrono::Utc::now().timestamp().to_string();
         let signer = SecretSigner::new(
             config.clone(),
@@ -254,28 +250,8 @@ mod tests {
 
     #[tokio::test]
     async fn missing_signature_header() {
-        let config = SlackAuthConfig {
-            version_number: "v0".to_string(),
-            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
-        };
-        let layer = SlackAuthLayer::new(config.clone());
-        let service = layer.layer(service_fn(|_req| async {
-            Ok::<_, Infallible>(Response::new(Body::from("OK")))
-        }));
-
-        let request_body = concat!(
-            "token=xyzz0WbapA4vBCDEFasx0q6G",
-            "&team_id=T1DC2JH3J",
-            "&team_domain=testteamnow",
-            "&channel_id=G8PSS9T3V",
-            "&channel_name=foobar",
-            "&user_id=U2CERLKJA",
-            "&user_name=roadrunner",
-            "&command=%2Fwebhook-collect",
-            "&text=",
-            "&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT1DC2JH3J%2F397700885554%2F96rGlfmibIGlgcZRskXaIFfN",
-            "&trigger_id=398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
-        );
+        let (_, service) = create_test_service();
+        let request_body = create_request_body();
         let timestamp = chrono::Utc::now().timestamp().to_string();
 
         let request = Request::builder()
@@ -289,28 +265,8 @@ mod tests {
 
     #[tokio::test]
     async fn invalid_signature_header() {
-        let config = SlackAuthConfig {
-            version_number: "v0".to_string(),
-            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
-        };
-        let layer = SlackAuthLayer::new(config.clone());
-        let service = layer.layer(service_fn(|_req| async {
-            Ok::<_, Infallible>(Response::new(Body::from("OK")))
-        }));
-
-        let request_body = concat!(
-            "token=xyzz0WbapA4vBCDEFasx0q6G",
-            "&team_id=T1DC2JH3J",
-            "&team_domain=testteamnow",
-            "&channel_id=G8PSS9T3V",
-            "&channel_name=foobar",
-            "&user_id=U2CERLKJA",
-            "&user_name=roadrunner",
-            "&command=%2Fwebhook-collect",
-            "&text=",
-            "&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT1DC2JH3J%2F397700885554%2F96rGlfmibIGlgcZRskXaIFfN",
-            "&trigger_id=398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
-        );
+        let (_, service) = create_test_service();
+        let request_body = create_request_body();
         let timestamp = chrono::Utc::now().timestamp().to_string();
         let signature = "invalid_signature";
 
@@ -326,28 +282,8 @@ mod tests {
 
     #[tokio::test]
     async fn missing_timestamp_header() {
-        let config = SlackAuthConfig {
-            version_number: "v0".to_string(),
-            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
-        };
-        let layer = SlackAuthLayer::new(config.clone());
-        let service = layer.layer(service_fn(|_req| async {
-            Ok::<_, Infallible>(Response::new(Body::from("OK")))
-        }));
-
-        let request_body = concat!(
-            "token=xyzz0WbapA4vBCDEFasx0q6G",
-            "&team_id=T1DC2JH3J",
-            "&team_domain=testteamnow",
-            "&channel_id=G8PSS9T3V",
-            "&channel_name=foobar",
-            "&user_id=U2CERLKJA",
-            "&user_name=roadrunner",
-            "&command=%2Fwebhook-collect",
-            "&text=",
-            "&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT1DC2JH3J%2F397700885554%2F96rGlfmibIGlgcZRskXaIFfN",
-            "&trigger_id=398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
-        );
+        let (config, service) = create_test_service();
+        let request_body = create_request_body();
         let signer = SecretSigner::new(
             config.clone(),
             request_body.to_string(),
@@ -366,28 +302,8 @@ mod tests {
 
     #[tokio::test]
     async fn invalid_timestamp_header() {
-        let config = SlackAuthConfig {
-            version_number: "v0".to_string(),
-            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
-        };
-        let layer = SlackAuthLayer::new(config.clone());
-        let service = layer.layer(service_fn(|_req| async {
-            Ok::<_, Infallible>(Response::new(Body::from("OK")))
-        }));
-
-        let request_body = concat!(
-            "token=xyzz0WbapA4vBCDEFasx0q6G",
-            "&team_id=T1DC2JH3J",
-            "&team_domain=testteamnow",
-            "&channel_id=G8PSS9T3V",
-            "&channel_name=foobar",
-            "&user_id=U2CERLKJA",
-            "&user_name=roadrunner",
-            "&command=%2Fwebhook-collect",
-            "&text=",
-            "&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT1DC2JH3J%2F397700885554%2F96rGlfmibIGlgcZRskXaIFfN",
-            "&trigger_id=398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
-        );
+        let (config, service) = create_test_service();
+        let request_body = create_request_body();
         let timestamp = "invalid_timestamp";
         let signer = SecretSigner::new(
             config.clone(),
@@ -408,28 +324,8 @@ mod tests {
 
     #[tokio::test]
     async fn expired_timestamp() {
-        let config = SlackAuthConfig {
-            version_number: "v0".to_string(),
-            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
-        };
-        let layer = SlackAuthLayer::new(config.clone());
-        let service = layer.layer(service_fn(|_req| async {
-            Ok::<_, Infallible>(Response::new(Body::from("OK")))
-        }));
-
-        let request_body = concat!(
-            "token=xyzz0WbapA4vBCDEFasx0q6G",
-            "&team_id=T1DC2JH3J",
-            "&team_domain=testteamnow",
-            "&channel_id=G8PSS9T3V",
-            "&channel_name=foobar",
-            "&user_id=U2CERLKJA",
-            "&user_name=roadrunner",
-            "&command=%2Fwebhook-collect",
-            "&text=",
-            "&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT1DC2JH3J%2F397700885554%2F96rGlfmibIGlgcZRskXaIFfN",
-            "&trigger_id=398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
-        );
+        let (config, service) = create_test_service();
+        let request_body = create_request_body();
         let timestamp = (chrono::Utc::now().timestamp() - 60 * 6).to_string();
         let signer = SecretSigner::new(
             config.clone(),
@@ -450,28 +346,8 @@ mod tests {
 
     #[tokio::test]
     async fn mismatched_signature() {
-        let config = SlackAuthConfig {
-            version_number: "v0".to_string(),
-            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
-        };
-        let layer = SlackAuthLayer::new(config.clone());
-        let service = layer.layer(service_fn(|_req| async {
-            Ok::<_, Infallible>(Response::new(Body::from("OK")))
-        }));
-
-        let request_body = concat!(
-            "token=xyzz0WbapA4vBCDEFasx0q6G",
-            "&team_id=T1DC2JH3J",
-            "&team_domain=testteamnow",
-            "&channel_id=G8PSS9T3V",
-            "&channel_name=foobar",
-            "&user_id=U2CERLKJA",
-            "&user_name=roadrunner",
-            "&command=%2Fwebhook-collect",
-            "&text=",
-            "&response_url=https%3A%2F%2Fhooks.slack.com%2Fcommands%2FT1DC2JH3J%2F397700885554%2F96rGlfmibIGlgcZRskXaIFfN",
-            "&trigger_id=398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
-        );
+        let (_, service) = create_test_service();
+        let request_body = create_request_body();
         let timestamp = chrono::Utc::now().timestamp().to_string();
         let signature = "v0=some_invalid_signature";
 
