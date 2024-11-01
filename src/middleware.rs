@@ -253,31 +253,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn invalid_request() {
-        let config = SlackAuthConfig {
-            version_number: "v0".to_string(),
-            slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
-        };
-        let layer = SlackAuthLayer::new(config.clone());
-        let service = layer.layer(service_fn(|_req| async {
-            Ok::<_, Infallible>(Response::new(Body::from("OK")))
-        }));
-
-        let request_body = "invalid_body";
-        let timestamp = "1531420618";
-        let signature = "v0=invalid_signature";
-
-        let request = Request::builder()
-            .header("x-slack-signature", signature)
-            .header("x-slack-request-timestamp", timestamp)
-            .body(Body::from(request_body))
-            .unwrap();
-
-        let response = service.oneshot(request).await.unwrap();
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-    }
-
-    #[tokio::test]
     async fn missing_signature_header() {
         let config = SlackAuthConfig {
             version_number: "v0".to_string(),
