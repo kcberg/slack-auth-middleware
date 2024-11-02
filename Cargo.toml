@@ -6,7 +6,7 @@ license = "MIT"
 description = "A middleware layer for Axum to authenticate requests from Slack using HMAC signatures."
 repository = "https://github.com/reinhash/slack-auth-middleware"
 keywords = ["slack", "authentication", "middleware", "axum", "tower"]
-categories = ["web-programming", "authentication", "security"]
+categories = ["web-programming", "authentication"]
 
 [dependencies]
 axum = "0.7.5"
