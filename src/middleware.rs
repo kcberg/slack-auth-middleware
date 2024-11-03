@@ -128,7 +128,7 @@ where
     }
 }
 
-struct SecretSigner {
+pub struct SecretSigner {
     config: SlackAuthConfig,
     request_body: String,
     timestamp: i64,

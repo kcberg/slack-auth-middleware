@@ -32,5 +32,6 @@
 
 mod middleware;
 
+pub use middleware::SecretSigner;
 pub use middleware::SlackAuthConfig;
 pub use middleware::SlackAuthLayer;
