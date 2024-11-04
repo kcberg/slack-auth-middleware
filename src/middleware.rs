@@ -143,7 +143,7 @@ impl SecretSigner {
         }
     }
 
-    fn sign(&self) -> Result<String, hmac::digest::InvalidLength> {
+    pub fn sign(&self) -> Result<String, hmac::digest::InvalidLength> {
         let base_string = format!(
             "{version_number}:{timestamp}:{request_body}",
             version_number = self.config.version_number,
@@ -210,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    pub fn sign() {
+    fn sign() {
         let config = SlackAuthConfig {
             version_number: "v0".to_string(),
             slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
