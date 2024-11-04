@@ -210,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    fn sign() {
+    pub fn sign() {
         let config = SlackAuthConfig {
             version_number: "v0".to_string(),
             slack_signing_secret: "8f742231b10e8888abcd99yyyzzz85a5".to_string(),
