@@ -39,7 +39,6 @@ impl<S> Layer<S> for SlackAuthLayer {
         }
     }
 }
-// TODO: write documentation
 
 #[derive(Clone)]
 pub struct SlackAuthService<S> {

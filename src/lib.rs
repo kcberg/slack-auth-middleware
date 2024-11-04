@@ -6,9 +6,10 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```no_run
 //! use axum::{routing::get, Router};
 //! use slack_auth_middleware::{SlackAuthConfig, SlackAuthLayer};
+//! use tracing_subscriber;
 //!
 //! #[tokio::main]
 //! async fn main() {
@@ -32,6 +33,7 @@
 
 mod middleware;
 
-pub use middleware::SecretSigner;
 pub use middleware::SlackAuthConfig;
 pub use middleware::SlackAuthLayer;
+// exposed, so you can test your API.
+pub use middleware::SecretSigner;
