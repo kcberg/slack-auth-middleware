@@ -9,16 +9,16 @@ keywords = ["slack", "authentication", "middleware", "axum", "tower"]
 categories = ["web-programming", "authentication"]
 
 [dependencies]
-axum = "0.7.5"
+axum = "0.8.1"
 chrono = "0.4.38"
-futures-util = "0.3.30"
+futures-util = "0.3.31"
 hex = "0.4.3"
 hmac = "0.12.1"
 http-body-util = "0.1.2"
 sha2 = "0.10.8"
-tower = "0.5.1"
+tower = "0.5.2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-tower = { version = "0.5.1", features = ["util"] }
+tower = { version = "0.5.2", features = ["util"] }
 tracing-subscriber = "0.3.18"
